@@ -1,89 +1,107 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
-module.exports = {
-    mode: 'development',
+function isProd(argv) {
+    return argv.mode === 'production';
+}
 
-    context: path.join(__dirname, 'src'),
+function getConfig(_env, argv) {
+    return {
+        context: path.join(__dirname, 'src'),
 
-    entry: {
-        index: './index',
-        styles: './index.less'
-    },
+        entry: {
+            index: './index',
+            styles: './index.less'
+        },
 
-    output: {
-        path: path.join(__dirname, 'dist'),
-        filename: '[name].js'
-    },
+        output: {
+            path: path.join(__dirname, 'dist'),
+            filename: '[name].js'
+        },
 
-    resolve: {
-        extensions: ['.ts', '.js'],
+        resolve: {
+            extensions: ['.ts', '.js'],
+            plugins: [
+                new TsconfigPathsPlugin()
+            ]
+        },
+
+        module: {
+            rules: [
+                {
+                    test: /\.component\.html$/,
+                    loader: 'raw-loader'
+                },
+                {
+                    test: /\.component\.less$/,
+                    use: [
+                        'to-string-loader',
+                        {
+                            loader: 'css-loader',
+                            options: {
+                                sourceMap: !isProd(argv)
+                            }
+                        },
+                        {
+                            loader: 'less-loader',
+                            options: {
+                                sourceMap: !isProd(argv)
+                            }
+                        }
+                    ]
+                },
+                {
+                    test: /\.less$/,
+                    exclude: /\.component\.less$/,
+                    use: [
+                        isProd(argv) ? MiniCssExtractPlugin.loader : 'style-loader',
+                        {
+                            loader: 'css-loader',
+                            options: {
+                                sourceMap: !isProd(argv)
+                            }
+                        },
+                        {
+                            loader: 'less-loader',
+                            options: {
+                                sourceMap: !isProd(argv)
+                            }
+                        }
+                    ]
+                },
+                {
+                    test: /\.ts$/,
+                    loader: 'ts-loader'
+                }
+            ]
+        },
+
         plugins: [
-            // https://github.com/dividab/tsconfig-paths-webpack-plugin
-            new TsconfigPathsPlugin()
-        ]
-    },
+            new HtmlWebpackPlugin({
+                template: './index.html'
+            }),
 
-    module: {
-        rules: [
-            {
-                test: /\.component\.less$/,
-                use: [
-                    'to-string-loader',
-                    {
-                        loader: 'css-loader',
-                        options: {
-                            sourceMap: true
-                        }
-                    },
-                    {
-                        loader: 'less-loader',
-                        options: {
-                            sourceMap: true
-                        }
-                    }
-                ]
-            },
-            {
-                test: /\.less$/,
-                exclude: /\.component\.less$/,
-                use: [
-                    'style-loader',
-                    {
-                        loader: 'css-loader',
-                        options: {
-                            sourceMap: true
-                        }
-                    },
-                    {
-                        loader: 'less-loader',
-                        options: {
-                            sourceMap: true
-                        }
-                    }
-                ]
-            },
-            {
-                test: /\.ts$/,
-                loader: 'ts-loader'
-            }
-        ]
-    },
+        ],
 
-    plugins: [
-        new HtmlWebpackPlugin({
-            template: './index.html'
-        }),
-        // new MiniCssExtractPlugin({
-        //     moduleFilename: ({ name }) => `${name.replace('/js/', '/css/')}.css`,
-        //     // filename: '[name].css',
-        //     // chunkFilename: '[id].css'
-        // })
-    ],
+        devServer: {
+            port: '4200',
+            open: true
+        },
 
-    devServer: {
-        port: '4200',
-        open: true
+        devtool: isProd(argv) ? 'none' : 'inline-source-map'
+    };
+}
+
+module.exports = (env, argv) => {
+    const config = getConfig(env, argv);
+
+    if (isProd(argv)) {
+        config.plugins.push(new MiniCssExtractPlugin());
+    } else {
+        config.mode = 'development'
     }
-};
+
+    return config;
+}

@@ -13,3 +13,9 @@ declare module '*.component.less' {
 
     export default content;
 }
+
+declare module '*.component.html' {
+    const content: any;
+
+    export default content;
+}
